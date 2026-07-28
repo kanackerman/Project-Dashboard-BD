@@ -137,15 +137,15 @@ elif menu == "Exploratory Data Analysis (EDA)":
     #Visualisasi Scaterplot
 
     st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel (Visualisasi Baru)")
-        col_x, col_y = st.columns(2)
-        var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_df.columns, index=0)
-        var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_df.columns, index=min(1, len(numeric_df.columns)-1))
+    col_x, col_y = st.columns(2)
+    var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_df.columns, index=0)
+    var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_df.columns, index=min(1, len(numeric_df.columns)-1))
 
-        fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
-        sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha':0.4}, line_kws={'color':'red'})
-        ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
-        ax_scatter.grid(True, linestyle="--", alpha=0.5)
-        st.pyplot(fig_scatter)
+    fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
+    sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha':0.4}, line_kws={'color':'red'})
+    ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
+    ax_scatter.grid(True, linestyle="--", alpha=0.5)
+    st.pyplot(fig_scatter)
 
     # Histogram / KDE Plot
         with col_hist:
