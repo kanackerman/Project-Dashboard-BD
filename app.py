@@ -26,7 +26,9 @@ plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.
 @st.cache_data
 def load_data():
     df = pd.read_csv("FINAL_USO.csv")
-    df['Date'] = pd.to_datetime(df['Date'])
+    df.columns = df.columns.str.strip()  # Membersihkan spasi pada nama kolom
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
     return df
 
 try:
@@ -36,12 +38,28 @@ except FileNotFoundError:
     st.stop()
 
 # ====================================================
+# PERSIAPAN VARIABEL DEFAULT
+# ====================================================
+numeric_df = df.select_dtypes(include=[np.number])
+numeric_cols = numeric_df.columns.tolist()
+
+# Menentukan variabel target default jika ada kolom GLD atau Close
+if 'GLD' in df.columns:
+    target_col = 'GLD'
+elif 'Close' in df.columns:
+    target_col = 'Close'
+else:
+    target_col = numeric_cols[-1] if numeric_cols else ""
+
+feature_cols = [col for col in numeric_cols if col != target_col]
+
+# ====================================================
 # SIDEBAR / NAVIGASI
 # ====================================================
 st.sidebar.title("📌 Navigasi Dashboard")
 menu = st.sidebar.radio(
     "Pilih Halaman:",
-    ["Overview Dataset", "Exploratory Data Analysis (EDA)", "Model Regresi Linier"]
+    ["Overview Dataset", "Visualisasi Trend & Korelasi", "Model Regresi Linier"]
 )
 
 st.sidebar.markdown("---")
@@ -58,8 +76,13 @@ if menu == "Overview Dataset":
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Baris Data", f"{df.shape[0]:,}")
     col2.metric("Total Kolom Data", df.shape[1])
-    col3.metric("Tanggal Mulai", df['Date'].min().strftime('%Y-%m-%d'))
-    col4.metric("Tanggal Selesai", df['Date'].max().strftime('%Y-%m-%d'))
+    
+    if 'Date' in df.columns:
+        col3.metric("Tanggal Mulai", df['Date'].min().strftime('%Y-%m-%d'))
+        col4.metric("Tanggal Selesai", df['Date'].max().strftime('%Y-%m-%d'))
+    else:
+        col3.metric("Tanggal Mulai", "N/A")
+        col4.metric("Tanggal Selesai", "N/A")
     
     st.markdown("---")
     
@@ -73,9 +96,9 @@ if menu == "Overview Dataset":
     
     with col_left:
         st.subheader("🍩 Distribusi Tipe Data")
-        dtype_counts = df.dtypes.value_counts().astype(str)
+        dtype_counts = df.dtypes.value_counts()
         fig, ax = plt.subplots(figsize=(4, 4))
-        ax.pie(df.dtypes.value_counts(), labels=dtype_counts.index, autopct="%1.1f%%", startangle=90)
+        ax.pie(dtype_counts, labels=[str(dt) for dt in dtype_counts.index], autopct="%1.1f%%", startangle=90)
         ax.axis('equal')
         st.pyplot(fig)
         
@@ -90,61 +113,59 @@ if menu == "Overview Dataset":
         st.subheader("📈 Ringkasan Statistik Deskriptif")
         st.dataframe(df.describe().T[['mean', 'std', 'min', '50%', 'max']], use_container_width=True)
 
-    # ---------------------------------------------------------
-    # HALAMAN 2: VISUALISASI TREND & KORELASI
-    # ---------------------------------------------------------
-    elif menu == "Visualisasi Trend & Korelasi":
-        st.title("📈 Visualisasi Pergerakan & Korelasi")
+# ====================================================
+# 2. HALAMAN: VISUALISASI TREND & KORELASI
+# ====================================================
+elif menu == "Visualisasi Trend & Korelasi":
+    st.title("📈 Visualisasi Pergerakan & Korelasi")
 
-        # Buat numeric_df di awal agar selalu tersedia untuk semua grafik
-        numeric_df = df.select_dtypes(include=[np.number])
+    # 1. Line Chart
+    st.subheader("1. Pergerakan Harga Seiring Waktu")
+    selected_metrics = st.multiselect(
+        "Pilih kolom harga yang ingin ditampilkan:",
+        options=numeric_cols,
+        default=[target_col] if target_col in numeric_cols else [numeric_cols[0]]
+    )
 
-        # 1. Line Chart
-        st.subheader("1. Pergerakan Harga Seiring Waktu")
-        selected_metrics = st.multiselect(
-            "Pilih kolom harga yang ingin ditampilkan:",
-            options=feature_cols + [target_col],
-            default=[target_col] if target_col in df.columns else [feature_cols[0]]
-        )
+    if selected_metrics:
+        fig, ax = plt.subplots(figsize=(12, 5))
+        x_axis = df['Date'] if 'Date' in df.columns else df.index
+        for metric in selected_metrics:
+            ax.plot(x_axis, df[metric], label=metric)
+        ax.set_title("Grafik Pergerakan Harga")
+        ax.set_xlabel("Waktu / Indeks")
+        ax.set_ylabel("Nilai")
+        ax.legend()
+        ax.grid(True, linestyle="--", alpha=0.5)
+        st.pyplot(fig)
 
-        if selected_metrics:
-            fig, ax = plt.subplots(figsize=(12, 5))
-            x_axis = df['Date'] if 'Date' in df.columns else df.index
-            for metric in selected_metrics:
-                ax.plot(x_axis, df[metric], label=metric)
-            ax.set_title("Grafik Pergerakan Harga")
-            ax.set_xlabel("Waktu / Indeks")
-            ax.set_ylabel("Nilai")
-            ax.legend()
-            ax.grid(True, linestyle="--", alpha=0.5)
-            st.pyplot(fig)
+    st.divider()
 
-        st.divider()
+    # 2. Correlation Heatmap
+    st.subheader("2. Heatmap Korelasi Antar Variabel")
+    if not numeric_df.empty:
+        fig_corr, ax_corr = plt.subplots(figsize=(10, 6))
+        sns.heatmap(numeric_df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax_corr)
+        ax_corr.set_title("Korelasi Matriks")
+        st.pyplot(fig_corr)
 
-        # 2. Correlation Heatmap
-        st.subheader("2. Heatmap Korelasi Antar Variabel")
-        if not numeric_df.empty:
-            fig_corr, ax_corr = plt.subplots(figsize=(10, 6))
-            sns.heatmap(numeric_df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax_corr)
-            ax_corr.set_title("Korelasi Matriks")
-            st.pyplot(fig_corr)
+    st.divider()
 
-        st.divider()
+    # 3. Scatter Plot Korelasi 2 Variabel
+    st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel")
+    if not numeric_df.empty and len(numeric_cols) >= 2:
+        col_x, col_y = st.columns(2)
+        var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_cols, index=0)
+        var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_cols, index=min(1, len(numeric_cols)-1))
 
-        # 3. Scatter Plot Korelasi 2 Variabel
-        st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel")
-        if not numeric_df.empty and len(numeric_df.columns) >= 2:
-            col_x, col_y = st.columns(2)
-            var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_df.columns, index=0)
-            var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_df.columns, index=1)
+        fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
+        sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha': 0.4}, line_kws={'color': 'red'})
+        ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
+        ax_scatter.grid(True, linestyle="--", alpha=0.5)
+        st.pyplot(fig_scatter)
+    else:
+        st.warning("Tidak cukup kolom numerik untuk menampilkan Scatter Plot.")
 
-            fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
-            sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha':0.4}, line_kws={'color':'red'})
-            ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
-            ax_scatter.grid(True, linestyle="--", alpha=0.5)
-            st.pyplot(fig_scatter)
-        else:
-            st.warning("Tidak cukup kolom numerik untuk menampilkan Scatter Plot.")
 # ====================================================
 # 3. HALAMAN: MODEL REGRESI LINIER
 # ====================================================
@@ -152,16 +173,19 @@ elif menu == "Model Regresi Linier":
     st.title("🤖 Simulasi Regresi Linier (Machine Learning)")
     st.write("Lakukan eksperimen regresi linier sederhana menggunakan variabel independen pilihan Anda untuk memprediksi variabel target.")
     
-    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-    
     col1, col2 = st.columns(2)
     with col1:
-        target_var = st.selectbox("Pilih Variabel Target (Y):", numeric_cols, index=numeric_cols.index("Close") if "Close" in numeric_cols else 0)
+        default_target_idx = numeric_cols.index(target_col) if target_col in numeric_cols else 0
+        target_var = st.selectbox("Pilih Variabel Target (Y):", numeric_cols, index=default_target_idx)
     with col2:
+        default_features = [c for c in ["Open", "High", "Low", "SP_close"] if c in numeric_cols]
+        if not default_features:
+            default_features = [numeric_cols[0]] if numeric_cols else []
+            
         feature_vars = st.multiselect(
             "Pilih Variabel Fitur/Prediktor (X):",
             numeric_cols,
-            default=["Open", "High", "Low", "SP_close"] if all(k in numeric_cols for k in ["Open", "High", "Low", "SP_close"]) else [numeric_cols[0]]
+            default=default_features
         )
         
     test_size = st.slider("Proporsi Data Uji (Test Size %):", 10, 40, 20) / 100.0
