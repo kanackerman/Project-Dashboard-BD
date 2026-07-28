@@ -90,70 +90,61 @@ if menu == "Overview Dataset":
         st.subheader("📈 Ringkasan Statistik Deskriptif")
         st.dataframe(df.describe().T[['mean', 'std', 'min', '50%', 'max']], use_container_width=True)
 
-# ====================================================
-# 2. HALAMAN: EXPLORATORY DATA ANALYSIS (EDA)
-# ====================================================
-elif menu == "Exploratory Data Analysis (EDA)":
-    st.title("📈 Exploratory Data Analysis (EDA)")
-    
-    # Visualisasi Tren Harga Berdasarkan Waktu
-    st.subheader("📉 Tren Harga Historis")
-    available_cols = [c for c in df.columns if c != 'Date']
-    selected_cols = st.multiselect(
-        "Pilih Indikator/Kolom untuk Ditampilkan pada Grafik Tren:",
-        options=available_cols,
-        default=["Close", "SP_close", "USO_Close"]
-    )
-    
-    if selected_cols:
-        fig, ax = plt.subplots(figsize=(12, 5))
-        for col in selected_cols:
-            ax.plot(df['Date'], df[col], label=col)
-        ax.set_xlabel("Tanggal")
-        ax.set_ylabel("Nilai / Harga")
-        ax.set_title("Grafik Pergerakan Harga Finansial")
-        ax.legend()
-        st.pyplot(fig)
-    else:
-        st.warning("Pilih minimal satu kolom untuk menampilkan grafik.")
-        
-    st.markdown("---")
-    
-    # Visualisasi Korelasi
-    st.subheader("🔥 Matriks Korelasi (Heatmap)")
-    corr_cols = st.multiselect(
-        "Pilih Kolom untuk Dihitung Korelasinya:",
-        options=available_cols,
-        default=["Open", "High", "Low", "Close", "Volume", "SP_close", "USO_Close", "GDX_Close"]
-    )
-    
-    if len(corr_cols) > 1:
-        fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
-        sns.heatmap(df[corr_cols].corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax_corr)
-        st.pyplot(fig_corr)
-    else:
-        st.info("Pilih minimal 2 kolom untuk melihat heatmap korelasi.")
-   
-    #Visualisasi Scaterplot
+    # ---------------------------------------------------------
+    # HALAMAN 2: VISUALISASI TREND & KORELASI
+    # ---------------------------------------------------------
+    elif menu == "Visualisasi Trend & Korelasi":
+        st.title("📈 Visualisasi Pergerakan & Korelasi")
 
-    st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel (Visualisasi Baru)")
-    col_x, col_y = st.columns(2)
-    var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_df.columns, index=0)
-    var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_df.columns, index=min(1, len(numeric_df.columns)-1))
+        # Buat numeric_df di awal agar selalu tersedia untuk semua grafik
+        numeric_df = df.select_dtypes(include=[np.number])
 
-    fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
-    sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha':0.4}, line_kws={'color':'red'})
-    ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
-    ax_scatter.grid(True, linestyle="--", alpha=0.5)
-    st.pyplot(fig_scatter)
+        # 1. Line Chart
+        st.subheader("1. Pergerakan Harga Seiring Waktu")
+        selected_metrics = st.multiselect(
+            "Pilih kolom harga yang ingin ditampilkan:",
+            options=feature_cols + [target_col],
+            default=[target_col] if target_col in df.columns else [feature_cols[0]]
+        )
 
-    # Histogram / KDE Plot
-    with col_hist:
-        st.subheader(f"Histogram Sebaran Nilai ({selected_var})")
-        fig_hist, ax_hist = plt.subplots(figsize=(6, 4))
-        sns.histplot(df[selected_var], kde=True, color="skyblue", ax=ax_hist)
-        ax_hist.set_title(f"Distribusi {selected_var}")
-        st.pyplot(fig_hist)
+        if selected_metrics:
+            fig, ax = plt.subplots(figsize=(12, 5))
+            x_axis = df['Date'] if 'Date' in df.columns else df.index
+            for metric in selected_metrics:
+                ax.plot(x_axis, df[metric], label=metric)
+            ax.set_title("Grafik Pergerakan Harga")
+            ax.set_xlabel("Waktu / Indeks")
+            ax.set_ylabel("Nilai")
+            ax.legend()
+            ax.grid(True, linestyle="--", alpha=0.5)
+            st.pyplot(fig)
+
+        st.divider()
+
+        # 2. Correlation Heatmap
+        st.subheader("2. Heatmap Korelasi Antar Variabel")
+        if not numeric_df.empty:
+            fig_corr, ax_corr = plt.subplots(figsize=(10, 6))
+            sns.heatmap(numeric_df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax_corr)
+            ax_corr.set_title("Korelasi Matriks")
+            st.pyplot(fig_corr)
+
+        st.divider()
+
+        # 3. Scatter Plot Korelasi 2 Variabel
+        st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel")
+        if not numeric_df.empty and len(numeric_df.columns) >= 2:
+            col_x, col_y = st.columns(2)
+            var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_df.columns, index=0)
+            var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_df.columns, index=1)
+
+            fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
+            sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha':0.4}, line_kws={'color':'red'})
+            ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
+            ax_scatter.grid(True, linestyle="--", alpha=0.5)
+            st.pyplot(fig_scatter)
+        else:
+            st.warning("Tidak cukup kolom numerik untuk menampilkan Scatter Plot.")
 # ====================================================
 # 3. HALAMAN: MODEL REGRESI LINIER
 # ====================================================
