@@ -133,14 +133,20 @@ elif menu == "Visualisasi Trend & Korelasi":
 
     st.divider()
 
-    # 2. Correlation Heatmap (SESUAI KODE AWAL)
-    st.subheader("2. Heatmap Korelasi Antar Variabel")
-    fig_corr, ax_corr = plt.subplots(figsize=(10, 6))
-    sns.heatmap(numeric_df.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax_corr)
-    ax_corr.set_title("Korelasi Matriks")
-    st.pyplot(fig_corr)
-
-    st.divider()
+    # Visualisasi Korelasi
+    st.subheader("🔥 Matriks Korelasi (Heatmap)")
+    corr_cols = st.multiselect(
+        "Pilih Kolom untuk Dihitung Korelasinya:",
+        options=available_cols,
+        default=["Open", "High", "Low", "Close", "Volume", "SP_close", "USO_Close", "GDX_Close"]
+    )
+    
+    if len(corr_cols) > 1:
+        fig_corr, ax_corr = plt.subplots(figsize=(8, 6))
+        sns.heatmap(df[corr_cols].corr(), annot=True, fmt=".2f", cmap="coolwarm", ax=ax_corr)
+        st.pyplot(fig_corr)
+    else:
+        st.info("Pilih minimal 2 kolom untuk melihat heatmap korelasi.")
 
     # 3. Scatter Plot Korelasi 2 Variabel
     st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel")
