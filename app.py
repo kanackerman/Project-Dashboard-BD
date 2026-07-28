@@ -148,12 +148,12 @@ elif menu == "Exploratory Data Analysis (EDA)":
     st.pyplot(fig_scatter)
 
     # Histogram / KDE Plot
-        with col_hist:
-            st.subheader(f"Histogram Sebaran Nilai ({selected_var})")
-            fig_hist, ax_hist = plt.subplots(figsize=(6, 4))
-            sns.histplot(df[selected_var], kde=True, color="skyblue", ax=ax_hist)
-            ax_hist.set_title(f"Distribusi {selected_var}")
-            st.pyplot(fig_hist)
+    with col_hist:
+        st.subheader(f"Histogram Sebaran Nilai ({selected_var})")
+        fig_hist, ax_hist = plt.subplots(figsize=(6, 4))
+        sns.histplot(df[selected_var], kde=True, color="skyblue", ax=ax_hist)
+        ax_hist.set_title(f"Distribusi {selected_var}")
+        st.pyplot(fig_hist)
 # ====================================================
 # 3. HALAMAN: MODEL REGRESI LINIER
 # ====================================================
