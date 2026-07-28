@@ -26,7 +26,9 @@ plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.
 @st.cache_data
 def load_data():
     df = pd.read_csv("FINAL_USO.csv")
-    df['Date'] = pd.to_datetime(df['Date'])
+    df.columns = df.columns.str.strip()  # Membersihkan spasi pada nama kolom
+    if 'Date' in df.columns:
+        df['Date'] = pd.to_datetime(df['Date'])
     return df
 
 try:
@@ -73,8 +75,13 @@ if menu == "Overview Dataset":
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Baris Data", f"{df.shape[0]:,}")
     col2.metric("Total Kolom Data", df.shape[1])
-    col3.metric("Tanggal Mulai", df['Date'].min().strftime('%Y-%m-%d'))
-    col4.metric("Tanggal Selesai", df['Date'].max().strftime('%Y-%m-%d'))
+    
+    if 'Date' in df.columns:
+        col3.metric("Tanggal Mulai", df['Date'].min().strftime('%Y-%m-%d'))
+        col4.metric("Tanggal Selesai", df['Date'].max().strftime('%Y-%m-%d'))
+    else:
+        col3.metric("Tanggal Mulai", "N/A")
+        col4.metric("Tanggal Selesai", "N/A")
     
     st.markdown("---")
     
@@ -133,12 +140,19 @@ elif menu == "Visualisasi Trend & Korelasi":
 
     st.divider()
 
-    # Visualisasi Korelasi
+    # 2. Heatmap Korelasi Interaktif (SESUAI REQUEST ANDA)
     st.subheader("🔥 Matriks Korelasi (Heatmap)")
+    
+    # Menyiapkan pilihan kolom default yang tersedia di dataset
+    default_corr_list = ["Open", "High", "Low", "Close", "Volume", "SP_close", "USO_Close", "GDX_Close"]
+    available_defaults = [col for col in default_corr_list if col in numeric_cols]
+    if not available_defaults:
+        available_defaults = numeric_cols[:min(8, len(numeric_cols))]
+
     corr_cols = st.multiselect(
         "Pilih Kolom untuk Dihitung Korelasinya:",
-        options=available_cols,
-        default=["Open", "High", "Low", "Close", "Volume", "SP_close", "USO_Close", "GDX_Close"]
+        options=numeric_cols,
+        default=available_defaults
     )
     
     if len(corr_cols) > 1:
@@ -147,6 +161,8 @@ elif menu == "Visualisasi Trend & Korelasi":
         st.pyplot(fig_corr)
     else:
         st.info("Pilih minimal 2 kolom untuk melihat heatmap korelasi.")
+
+    st.divider()
 
     # 3. Scatter Plot Korelasi 2 Variabel
     st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel")
@@ -206,8 +222,7 @@ elif menu == "Model Regresi Linier":
             st.subheader("🎯 Hasil Evaluasi Model")
             m1, m2, m3, m4 = st.columns(4)
             m1.metric("R² Score", f"{r2:.4f}")
-            m1_val = f"{mae:.4f}"
-            m2.metric("MAE", m1_val)
+            m2.metric("MAE", f"{mae:.4f}")
             m3.metric("MSE", f"{mse:.4f}")
             m4.metric("RMSE", f"{rmse:.4f}")
             
