@@ -133,7 +133,27 @@ elif menu == "Exploratory Data Analysis (EDA)":
         st.pyplot(fig_corr)
     else:
         st.info("Pilih minimal 2 kolom untuk melihat heatmap korelasi.")
+   
+    #Visualisasi Scaterplot
 
+    st.subheader("3. Scatter Plot Hubungan Antar 2 Variabel (Visualisasi Baru)")
+        col_x, col_y = st.columns(2)
+        var_x = col_x.selectbox("Pilih Variabel Sumbu X:", options=numeric_df.columns, index=0)
+        var_y = col_y.selectbox("Pilih Variabel Sumbu Y:", options=numeric_df.columns, index=min(1, len(numeric_df.columns)-1))
+
+        fig_scatter, ax_scatter = plt.subplots(figsize=(8, 4))
+        sns.regplot(data=df, x=var_x, y=var_y, ax=ax_scatter, scatter_kws={'alpha':0.4}, line_kws={'color':'red'})
+        ax_scatter.set_title(f"Hubungan antara {var_x} dan {var_y}")
+        ax_scatter.grid(True, linestyle="--", alpha=0.5)
+        st.pyplot(fig_scatter)
+
+    # Histogram / KDE Plot
+        with col_hist:
+            st.subheader(f"Histogram Sebaran Nilai ({selected_var})")
+            fig_hist, ax_hist = plt.subplots(figsize=(6, 4))
+            sns.histplot(df[selected_var], kde=True, color="skyblue", ax=ax_hist)
+            ax_hist.set_title(f"Distribusi {selected_var}")
+            st.pyplot(fig_hist)
 # ====================================================
 # 3. HALAMAN: MODEL REGRESI LINIER
 # ====================================================
